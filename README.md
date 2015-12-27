@@ -1,5 +1,21 @@
-# Practical-Machine-Learning
-Practical Machine Learning - Prediction Assignment Writeup
+---
+title: "Practical Machine Learning - Prediction Assignment Writeup"
+author: "Ciprian Alexandru"
+date: "December 28, 2015"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(randomForest)
+library(gbm)
+```
 
 # Introduction
 
@@ -26,19 +42,20 @@ The goal of your project is to predict the manner in which they did the exercise
 
 # Loading the data
 
-```{r cars}
-set.seed(12345)
+```{r}
+# set.seed for reproducibility
+set.seed(123)
 
-trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+trainingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testingUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
-training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
-testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+training <- read.csv(url(trainingUrl), na.strings = c("NA", "#DIV/0!", ""))
+testing <- read.csv(url(testingUrl), na.strings = c("NA", "#DIV/0!", ""))
 ```
 
 Partioning the data.
 
-```{r cars}
+```{r}
 inTrain <- createDataPartition(training$classe, p=0.6, list=FALSE)
 myTraining <- training[inTrain, ]
 myTesting <- training[-inTrain, ]
@@ -50,11 +67,11 @@ dim(myTraining); dim(myTesting)
 Remove NearZeroVariance variables:
 
 ```{r}
-nzv <- nearZeroVar(myTraining, saveMetrics=TRUE)
-myTraining <- myTraining[,nzv$nzv==FALSE]
+nzv <- nearZeroVar(myTraining, saveMetrics = TRUE)
+myTraining <- myTraining[, nzv$nzv == FALSE]
 
-nzv<- nearZeroVar(myTesting,saveMetrics=TRUE)
-myTesting <- myTesting[,nzv$nzv==FALSE]
+nzv <- nearZeroVar(myTesting, saveMetrics = TRUE)
+myTesting <- myTesting[, nzv$nzv == FALSE]
 ```
 
 Remove the first column of the myTraining data set:
@@ -62,14 +79,13 @@ Remove the first column of the myTraining data set:
 myTraining <- myTraining[c(-1)]
 ```
 
-Clean variables with more than 60% NA
-
+Clean variables with more than 60% NA:
 ```{r}
 trainingV3 <- myTraining
 for(i in 1:length(myTraining)) {
-    if( sum( is.na( myTraining[, i] ) ) /nrow(myTraining) >= .7) {
+    if(sum(is.na(myTraining[, i])) / nrow(myTraining) >= .7) {
         for(j in 1:length(trainingV3)) {
-            if( length( grep(names(myTraining[i]), names(trainingV3)[j]) ) == 1)  {
+            if( length(grep(names(myTraining[i]), names(trainingV3)[j])) == 1)  {
                 trainingV3 <- trainingV3[ , -j]
             }   
         } 
@@ -113,7 +129,7 @@ testing <- testing[-1,]
 # Prediction with Decision Trees
 
 ```{r}
-set.seed(12345)
+set.seed(123)
 modFitA1 <- rpart(classe ~ ., data=myTraining, method="class")
 fancyRpartPlot(modFitA1)
 ```
@@ -131,21 +147,22 @@ plot(cmtree$table, col = cmtree$byClass, main = paste("Decision Tree Confusion M
 # Prediction with Random Forests
 
 ```{r}
-set.seed(12345)
+set.seed(123)
 modFitB1 <- randomForest(classe ~ ., data=myTraining)
 predictionB1 <- predict(modFitB1, myTesting, type = "class")
-cmrf <- confusionMatrix(predictionB1, myTesting$classe)
-cmrf
+(cmrf <- confusionMatrix(predictionB1, myTesting$classe))
 
 plot(modFitB1)
 
-plot(cmrf$table, col = cmtree$byClass, main = paste("Random Forest Confusion Matrix: Accuracy =", round(cmrf$overall['Accuracy'], 4)))
+plot(cmrf$table, col = cmtree$byClass, 
+        main = paste("Random Forest Confusion Matrix: Accuracy =", 
+        round(cmrf$overall['Accuracy'], 4)))
 ```
 
 # Prediction with Generalized Boosted Regression
 
 ```{r}
-set.seed(12345)
+set.seed(123)
 fitControl <- trainControl(method = "repeatedcv",
                            number = 5,
                            repeats = 1)
@@ -154,12 +171,10 @@ gbmFit1 <- train(classe ~ ., data=myTraining, method = "gbm",
                  trControl = fitControl,
                  verbose = FALSE)
 
-
 gbmFinMod1 <- gbmFit1$finalModel
 
 gbmPredTest <- predict(gbmFit1, newdata=myTesting)
-gbmAccuracyTest <- confusionMatrix(gbmPredTest, myTesting$classe)
-gbmAccuracyTest
+(gbmAccuracyTest <- confusionMatrix(gbmPredTest, myTesting$classe))
 
 plot(gbmFit1, ylim=c(0.9, 1))
 ```
@@ -169,8 +184,7 @@ plot(gbmFit1, ylim=c(0.9, 1))
 Random Forests gave an Accuracy in the myTesting dataset of 99.89%, which was more accurate that what I got from the Decision Trees or GBM. The expected out-of-sample error is 100-99.89 = 0.11%.
 
 ```{r}
-predictionB2 <- predict(modFitB1, testing, type = "class")
-predictionB2
+(predictionB2 <- predict(modFitB1, testing, type = "class"))
 ```
 
 ```{r}
@@ -183,6 +197,7 @@ pml_write_files = function(x){
     }
 }
 
-#pml_write_files(predictionB2)
+pml_write_files(predictionB2)
 ```
+
 
